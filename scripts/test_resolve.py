@@ -1,5 +1,11 @@
+import sys
+import os
 import logging
 import traceback
+
+# Ensure project root is on sys.path so resolve.* imports work regardless of
+# the working directory from which this script is invoked.
+sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 logging.basicConfig(level=logging.INFO)
 

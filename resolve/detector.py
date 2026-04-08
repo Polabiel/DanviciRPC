@@ -44,7 +44,7 @@ def is_resolve_running() -> bool:
         _log.warning("Access denied while iterating processes: %s", exc)
     except psutil.NoSuchProcess:
         pass  # process vanished between iteration and attribute access
-    _log.info("No Resolve process detected")
+    _log.debug("No Resolve process detected")
     return False
 
 
@@ -70,25 +70,25 @@ def detect_mode_from_window() -> str:
 
     try:
         windows = gw.getAllTitles()
-        _log.info("Enumerated %d window titles for mode detection.", len(windows) if windows is not None else 0)
+        _log.debug("Enumerated %d window titles for mode detection.", len(windows) if windows is not None else 0)
     except (AttributeError, RuntimeError, OSError) as exc:
         _log.warning("Failed to enumerate windows: %s", exc)
         return FALLBACK_MODE
 
     resolve_titles = [t for t in windows if t and ("davinci resolve" in t.lower() or "resolve" in t.lower())]
-    _log.info("Resolve window titles found: %s", resolve_titles)
+    _log.debug("Resolve window titles found: %d", len(resolve_titles))
 
     if not resolve_titles:
-        _log.info("No Resolve window titles matched — using fallback mode %r", FALLBACK_MODE)
+        _log.debug("No Resolve window titles matched — using fallback mode %r", FALLBACK_MODE)
         return FALLBACK_MODE
 
     title_lower = resolve_titles[0].lower()
     for keyword, mode in WINDOW_MODE_MAP.items():
         if keyword in title_lower:
-            _log.info("Detected mode %r from window title %r", mode, resolve_titles[0])
+            _log.debug("Detected mode %r from window title", mode)
             return mode
 
-    _log.info("No keyword matched in Resolve title — using fallback mode %r", FALLBACK_MODE)
+    _log.debug("No keyword matched in Resolve title — using fallback mode %r", FALLBACK_MODE)
     return FALLBACK_MODE
 
 
@@ -127,7 +127,7 @@ def detect_project_from_window() -> Optional[str]:
             idx = lower.find(marker)
             project = t[idx + len(marker) :].strip()
             if project:
-                _log.info("Detected project name from window (pattern 'DaVinci Resolve -'): %r", project)
+                _log.debug("Detected project name from window (pattern 'DaVinci Resolve -')")
                 return project
 
         # Pattern: "Project Name - DaVinci Resolve"
@@ -136,7 +136,7 @@ def detect_project_from_window() -> Optional[str]:
             idx = lower.find(marker2)
             project = t[:idx].strip()
             if project:
-                _log.info("Detected project name from window (pattern '- DaVinci Resolve'): %r", project)
+                _log.debug("Detected project name from window (pattern '- DaVinci Resolve')")
                 return project
 
     return None

@@ -13,7 +13,6 @@ import sys
 import time
 import os
 import psutil
-import os
 import logging
 
 from config import UPDATE_INTERVAL, FALLBACK_PROJECT, validate as validate_config
@@ -42,7 +41,6 @@ def find_conflicting_instances(project_root: str) -> list:
     Excludes the current process.
     """
     current_pid = os.getpid()
-    current_script = os.path.abspath(sys.argv[0]).lower()
     matches = []
     for proc in psutil.process_iter(["pid", "name", "cmdline", "exe"]):
         try:
@@ -58,10 +56,10 @@ def find_conflicting_instances(project_root: str) -> list:
             else:
                 cmdline = str(cmdline_list).lower()
 
-            # Heuristic matches
+            # Require both the project root path AND "main.py" to be in the
+            # command line, or a packaged binary name, to avoid false positives.
             if (
-                project_root.lower() in cmdline
-                or "main.py" in cmdline
+                (project_root.lower() in cmdline and "main.py" in cmdline)
                 or "resolve-rpc" in name
                 or "resolve-rpc" in str(exe).lower()
             ):
@@ -236,7 +234,7 @@ def run() -> None:
 
             # ── Build state and decide whether an RPC update is needed ───────
             new_state = _build_state(resolve_client, resolve_active)
-            _log.info("Built state snapshot: %s", new_state)
+            _log.debug("Built state snapshot: %s", new_state)
             state_changed = state_mgr.update(new_state)
 
             if state_changed or not rpc.connected:
@@ -248,6 +246,7 @@ def run() -> None:
             time.sleep(sleep_time)
     except Exception as exc:  # pragma: no cover - defensive logging
         _log.exception("Unhandled exception — exiting: %s", exc)
+        raise
     finally:
         # Log a clear exit message including whether Resolve was detected
         try:

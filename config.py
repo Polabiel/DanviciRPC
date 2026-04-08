@@ -11,9 +11,13 @@ try:
     _dotenv_path = find_dotenv()
     if _dotenv_path:
         load_dotenv(_dotenv_path)
-except Exception:
-    # python-dotenv not installed or failed to load — continue without it.
+except ImportError:
+    # python-dotenv is optional; continue without loading a .env file.
     pass
+except Exception as exc:
+    logging.getLogger("config").warning(
+        "Failed to load environment variables from .env: %s", exc
+    )
 
 # ── Discord ──────────────────────────────────────────────────────────────────
 # Override by setting the DISCORD_CLIENT_ID environment variable.
