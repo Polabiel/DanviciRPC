@@ -37,6 +37,24 @@ def _load_resolve_module() -> Optional[object]:
 def _try_add_resolve_path() -> None:
     """Add Resolve's script path to sys.path when running on Windows/macOS."""
     import os
+    # Allow an explicit override via environment variable for users with
+    # non-standard Resolve installations or when running inside virtualenvs.
+    env_var_name = None
+    env_path = os.environ.get("RESOLVE_SCRIPT_PATH")
+    if env_path:
+        env_var_name = "RESOLVE_SCRIPT_PATH"
+    else:
+        env_path = os.environ.get("DAVINCI_RESOLVE_SCRIPT_PATH")
+        if env_path:
+            env_var_name = "DAVINCI_RESOLVE_SCRIPT_PATH"
+
+    if env_path:
+        if os.path.isdir(env_path) and env_path not in sys.path:
+            sys.path.append(env_path)
+            _log.debug("Added Resolve scripting path from %s: %s", env_var_name, env_path)
+            return
+        else:
+            _log.warning("%s is set but does not point to a directory: %r", env_var_name, env_path)
 
     candidates = [
         # macOS
@@ -102,6 +120,13 @@ class ResolveClient:
 
     def refresh(self) -> None:
         """Re-attempt a connection if the client is not yet available."""
+        # Respect the global feature flag — do not attempt to load Resolve's
+        # native scripting module unless explicitly enabled by the operator.
+        from config import ENABLE_RESOLVE_API
+
+        if not ENABLE_RESOLVE_API:
+            return
+
         if not self.available:
             self._connect()
 

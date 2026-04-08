@@ -43,7 +43,7 @@ jobs:
         env:
           DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
           LARGE_IMAGE_KEY: ${{ secrets.LARGE_IMAGE_KEY }}
-        run: pyinstaller resolve-rpc.spec
+        run: pyinstaller --onefile --name resolve-rpc main.py
 
       # ── Windows: rename dist/resolve-rpc.exe → dist/resolve-rpc-windows.exe ─
       - name: Rename Windows artifact

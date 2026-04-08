@@ -104,6 +104,7 @@ class RPCClient:
             start_timestamp: Unix timestamp used to display elapsed time.
         """
         if not self._ensure_connected():
+            _log.debug("Skipped update_active: not connected to Discord")
             return
 
         payload: dict = {
@@ -115,19 +116,23 @@ class RPCClient:
         if start_timestamp is not None:
             payload["start"] = int(start_timestamp)
 
+        _log.debug("Sending RPC active update: %s", payload)
         self._safe_update(**payload)
 
     def update_inactive(self) -> None:
         """Push an *inactive* presence to Discord (Resolve is closed)."""
         if not self._ensure_connected():
+            _log.debug("Skipped update_inactive: not connected to Discord")
             return
 
-        self._safe_update(
+        payload = dict(
             details=INACTIVE_DETAILS,
             state=INACTIVE_STATE,
             large_image=LARGE_IMAGE_KEY,
             large_text=LARGE_IMAGE_TEXT,
         )
+        _log.debug("Sending RPC inactive update: %s", payload)
+        self._safe_update(**payload)
 
     def close(self) -> None:
         """Gracefully close the Discord RPC connection."""
@@ -183,10 +188,12 @@ class RPCClient:
     def _safe_update(self, **kwargs: object) -> None:
         """Call :meth:`pypresence.Presence.update` with error handling."""
         if self._presence is None:
+            _log.warning("Attempted RPC update with no Presence object")
             return
         try:
+            _log.debug("Attempting Presence.update with payload")
             self._presence.update(**kwargs)  # type: ignore[arg-type]
-            _log.debug("RPC updated: %s", kwargs)
+            _log.debug("RPC update sent: %s", kwargs)
         except DiscordError as exc:
             _log.warning("Discord returned an error during update: %s", exc)
             self._connected = False
