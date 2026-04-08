@@ -69,7 +69,50 @@ CLIENT_ID: str = os.environ.get("DISCORD_CLIENT_ID", "SeuClientIdAqui")
 
 ---
 
-## 🚀 Como Rodar
+## 🔐 Secrets no GitHub
+
+Configure os seguintes secrets no repositório (**Settings → Secrets and variables → Actions → New repository secret**):
+
+| Secret              | Descrição                                                   |
+|---------------------|-------------------------------------------------------------|
+| `DISCORD_CLIENT_ID` | Application ID do Discord Developer Portal                  |
+| `LARGE_IMAGE_KEY`   | Nome do asset de imagem registrado no Discord (ex.: `resolve`) |
+
+O pipeline injeta esses valores como variáveis de ambiente no momento do build. O binário gerado **lê esses valores em tempo de execução** — nunca ficam embutidos no código.
+
+---
+
+## 🔄 Pipeline CI/CD
+
+O arquivo `.github/workflows/release.yml` executa automaticamente a cada push na branch `main`:
+
+1. **Build matrix** (paralelo em 3 plataformas):
+   - `windows-latest` → gera `resolve-rpc-windows.exe`
+   - `ubuntu-latest` → gera `resolve-rpc-linux.deb`
+   - `macos-latest` → gera `resolve-rpc-macos.dmg`
+2. **Release automático**: cria uma release no GitHub com os três artefatos anexados e tag no formato `v{YYYY.MM.DD}-build-{N}`.
+
+O build usa **PyInstaller** (`resolve-rpc.spec`) para gerar executáveis standalone — sem necessidade de Python instalado na máquina do usuário final.
+
+---
+
+## 🛠️ Build Local
+
+Para gerar o executável na sua máquina:
+
+```bash
+# Instalar dependências + PyInstaller
+pip install -r requirements.txt pyinstaller
+
+# Gerar binário
+pyinstaller resolve-rpc.spec
+```
+
+O executável ficará em `dist/resolve-rpc` (Linux/macOS) ou `dist/resolve-rpc.exe` (Windows).
+
+---
+
+
 
 ### Pré-requisitos
 

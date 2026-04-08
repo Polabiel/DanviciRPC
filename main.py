@@ -12,7 +12,7 @@ import signal
 import sys
 import time
 
-from config import UPDATE_INTERVAL, FALLBACK_MODE, FALLBACK_PROJECT
+from config import UPDATE_INTERVAL, FALLBACK_PROJECT, validate as validate_config
 from core.session import SessionTracker
 from core.state_manager import AppState, StateManager
 from discord.rpc_client import RPCClient
@@ -103,6 +103,7 @@ def _push_rpc(
 def run() -> None:
     """Entry point for the main update loop."""
     _log.info("DaVinciRPC starting …")
+    validate_config()
 
     rpc = RPCClient()
     resolve_client = ResolveClient()

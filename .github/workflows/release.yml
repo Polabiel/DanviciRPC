@@ -1,0 +1,134 @@
+name: Build and Release
+
+on:
+  push:
+    branches:
+      - main
+
+# Required for creating releases and uploading artifacts
+permissions:
+  contents: write
+
+jobs:
+  # ── Multi-platform build ────────────────────────────────────────────────────
+  build:
+    name: Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - os: windows-latest
+            artifact_name: resolve-rpc-windows.exe
+          - os: ubuntu-latest
+            artifact_name: resolve-rpc-linux.deb
+          - os: macos-latest
+            artifact_name: resolve-rpc-macos.dmg
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install runtime dependencies and PyInstaller
+        run: pip install -r requirements.txt pyinstaller
+
+      # ── Build one-file executable with PyInstaller ──────────────────────────
+      - name: Build executable
+        env:
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          LARGE_IMAGE_KEY: ${{ secrets.LARGE_IMAGE_KEY }}
+        run: pyinstaller resolve-rpc.spec
+
+      # ── Windows: rename dist/resolve-rpc.exe → dist/resolve-rpc-windows.exe ─
+      - name: Rename Windows artifact
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Copy-Item dist\resolve-rpc.exe dist\resolve-rpc-windows.exe
+
+      # ── Linux: package binary into .deb ────────────────────────────────────
+      - name: Package .deb (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          mkdir -p pkg/DEBIAN pkg/usr/bin
+          cp dist/resolve-rpc pkg/usr/bin/resolve-rpc
+          chmod +x pkg/usr/bin/resolve-rpc
+          python3 scripts/create_deb_control.py "1.0.${{ github.run_number }}" pkg/DEBIAN/control
+          dpkg-deb --build pkg dist/resolve-rpc-linux.deb
+
+      # ── macOS: wrap binary in a .dmg disk image ─────────────────────────────
+      - name: Package .dmg (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          mkdir -p staging
+          cp dist/resolve-rpc staging/resolve-rpc
+          hdiutil create \
+            -volname "DaVinciRPC" \
+            -srcfolder staging \
+            -ov \
+            -format UDZO \
+            dist/resolve-rpc-macos.dmg
+
+      # ── Upload platform artifact for the release job ─────────────────────────
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: dist/${{ matrix.artifact_name }}
+          if-no-files-found: error
+          retention-days: 1
+
+  # ── Create GitHub Release and attach all artifacts ──────────────────────────
+  release:
+    name: Create Release
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Generate release tag
+        id: tag
+        run: |
+          TAG="v$(date +'%Y.%m.%d')-build-${{ github.run_number }}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.tag }}
+          name: "Release ${{ steps.tag.outputs.tag }}"
+          body: |
+            Automated release from commit [${{ github.sha }}](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}).
+
+            ## Downloads
+
+            | Platform | File |
+            |----------|------|
+            | Windows  | `resolve-rpc-windows.exe` |
+            | Linux    | `resolve-rpc-linux.deb` |
+            | macOS    | `resolve-rpc-macos.dmg` |
+
+            ## Usage
+
+            Set the following environment variables before running:
+
+            ```bash
+            export DISCORD_CLIENT_ID="your_discord_application_id"
+            export LARGE_IMAGE_KEY="resolve"   # asset key in Discord Developer Portal
+            ```
+
+            Then run the executable directly — no Python installation required.
+          files: artifacts/*
+          fail_on_unmatched_files: true
+          generate_release_notes: true

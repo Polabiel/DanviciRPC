@@ -3,7 +3,16 @@
 import time
 from typing import Optional
 
-from pypresence import Presence, InvalidID, InvalidPipe, DiscordError  # type: ignore[import-untyped]
+from pypresence import (  # type: ignore[import-untyped]
+    Presence,
+    InvalidID,
+    InvalidPipe,
+    DiscordError,
+    DiscordNotFound,
+    PipeClosed,
+    ConnectionTimeout,
+    ResponseTimeout,
+)
 
 from config import (
     CLIENT_ID,
@@ -64,6 +73,14 @@ class RPCClient:
             _log.warning("Discord IPC pipe not found (is Discord running?): %s", exc)
             self._connected = False
             return False
+        except DiscordNotFound as exc:
+            _log.warning("Discord is not installed or not running: %s", exc)
+            self._connected = False
+            return False
+        except (ConnectionTimeout, ResponseTimeout) as exc:
+            _log.warning("Timed out while connecting to Discord: %s", exc)
+            self._connected = False
+            return False
         except ConnectionRefusedError as exc:
             _log.warning("Discord refused the connection: %s", exc)
             self._connected = False
@@ -114,7 +131,7 @@ class RPCClient:
 
     def close(self) -> None:
         """Gracefully close the Discord RPC connection."""
-        if self._presence is not None:
+        if self._presence is not None and self._connected:
             try:
                 self._presence.close()
                 _log.info("Discord RPC connection closed.")
@@ -173,8 +190,11 @@ class RPCClient:
         except DiscordError as exc:
             _log.warning("Discord returned an error during update: %s", exc)
             self._connected = False
-        except InvalidPipe as exc:
+        except (InvalidPipe, PipeClosed) as exc:
             _log.warning("Discord pipe lost during update: %s", exc)
+            self._connected = False
+        except (ConnectionTimeout, ResponseTimeout) as exc:
+            _log.warning("Discord update timed out: %s", exc)
             self._connected = False
         except OSError as exc:
             _log.warning("OS error during RPC update: %s", exc)
