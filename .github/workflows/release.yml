@@ -40,10 +40,12 @@ jobs:
 
       # ── Build one-file executable with PyInstaller ──────────────────────────
       - name: Build executable
-        env:
-          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-          LARGE_IMAGE_KEY: ${{ secrets.LARGE_IMAGE_KEY }}
-        run: pyinstaller --onefile --name resolve-rpc main.py
+        run: >
+          pyinstaller
+          --onefile
+          --noconsole
+          --name resolve-rpc
+          main.py
 
       # ── Windows: rename dist/resolve-rpc.exe → dist/resolve-rpc-windows.exe ─
       - name: Rename Windows artifact
@@ -121,29 +123,12 @@ jobs:
 
             ## Usage
 
-            Set the following environment variables before running:
+            1. Download the binary for your platform.
+            2. Run it — no configuration required.
+            3. The app will start automatically in the system tray and connect to Discord.
 
-            **Linux / macOS (bash/zsh):**
-            ```bash
-            export DISCORD_CLIENT_ID="your_discord_application_id"
-            export LARGE_IMAGE_KEY="resolve"
-            ```
-
-            **Windows — PowerShell:**
-            ```powershell
-            $env:DISCORD_CLIENT_ID = "your_discord_application_id"
-            $env:LARGE_IMAGE_KEY = "resolve"
-            ```
-
-            **Windows — Command Prompt (cmd.exe):**
-            ```bat
-            set DISCORD_CLIENT_ID=your_discord_application_id
-            set LARGE_IMAGE_KEY=resolve
-            ```
-
-            > **Tip:** You can also create a `.env` file in the same directory as the executable with the variables above — the application loads it automatically on startup.
-
-            Then run the executable directly — no Python installation required.
+            > **Note:** The app registers itself to launch on login automatically.
+            > To disable, set `AUTOSTART_ENABLED=false` in a `.env` file next to the binary.
           files: artifacts/*
           fail_on_unmatched_files: true
           generate_release_notes: true

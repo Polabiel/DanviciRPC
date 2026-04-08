@@ -19,11 +19,10 @@ except Exception as exc:
         "Failed to load environment variables from .env: %s", exc
     )
 
-# ── Discord ──────────────────────────────────────────────────────────────────
-# Override by setting the DISCORD_CLIENT_ID environment variable.
-# The placeholder below is intentionally invalid so Discord will reject the
-# connection and the validate() call below will emit a clear error message.
-CLIENT_ID: str = os.environ.get("DISCORD_CLIENT_ID", "REPLACE_WITH_YOUR_CLIENT_ID")
+# ── Discord ───────────────────────────────────────────────────────────────────
+# Default client ID is bundled so the app works out-of-the-box.
+# Can be overridden by setting the DISCORD_CLIENT_ID environment variable.
+CLIENT_ID: str = os.environ.get("DISCORD_CLIENT_ID", "1491285498361020626")
 
 # ── Polling ───────────────────────────────────────────────────────────────────
 UPDATE_INTERVAL: int = int(os.environ.get("UPDATE_INTERVAL", "15"))  # seconds
@@ -32,6 +31,11 @@ UPDATE_INTERVAL: int = int(os.environ.get("UPDATE_INTERVAL", "15"))  # seconds
 # Disable Resolve API by default to avoid importing native DaVinciResolveScript
 # on systems where Resolve is not installed or its Python modules may crash.
 ENABLE_RESOLVE_API: bool = os.environ.get("ENABLE_RESOLVE_API", "false").lower() == "true"
+
+# ── Auto-start ────────────────────────────────────────────────────────────────
+# Register the app to launch automatically on system login (enabled by default).
+# Can be disabled by setting AUTOSTART_ENABLED=false in the environment.
+AUTOSTART_ENABLED: bool = os.environ.get("AUTOSTART_ENABLED", "true").lower() == "true"
 
 # ── Reconnection ──────────────────────────────────────────────────────────────
 MAX_RECONNECT_ATTEMPTS: int = 5
@@ -52,6 +56,7 @@ WINDOW_MODE_MAP: dict[str, str] = {
 }
 
 # ── Discord asset key ─────────────────────────────────────────────────────────
+# Default key is bundled. Can be overridden via the LARGE_IMAGE_KEY env var.
 LARGE_IMAGE_KEY: str = os.environ.get("LARGE_IMAGE_KEY", "resolve")
 LARGE_IMAGE_TEXT: str = "DaVinci Resolve"
 
@@ -63,24 +68,8 @@ INACTIVE_STATE: str = "DaVinci Resolve fechado"
 
 
 def validate() -> None:
-    """Emit clear warnings for missing critical environment variables.
-
-    Called once at startup so operators see the problem immediately instead of
-    discovering it from a cryptic connection-refused error later.
-    """
+    """Log informational messages about the active configuration at startup."""
     _log = logging.getLogger("config")
-    if not os.environ.get("DISCORD_CLIENT_ID"):
-        _log.error(
-            "DISCORD_CLIENT_ID environment variable is not set. "
-            "The application will not connect to Discord. "
-            "Export DISCORD_CLIENT_ID before running."
-        )
-    elif CLIENT_ID == "REPLACE_WITH_YOUR_CLIENT_ID":
-        _log.error(
-            "DISCORD_CLIENT_ID is still set to the placeholder value. "
-            "Set it to your actual Discord Application ID."
-        )
-    if not os.environ.get("LARGE_IMAGE_KEY"):
-        _log.info(
-            "LARGE_IMAGE_KEY is not set — using default value %r.", LARGE_IMAGE_KEY
-        )
+    _log.info("Configuration loaded — UPDATE_INTERVAL=%ds", UPDATE_INTERVAL)
+    _log.info("ENABLE_RESOLVE_API=%s", ENABLE_RESOLVE_API)
+    _log.info("AUTOSTART_ENABLED=%s", AUTOSTART_ENABLED)

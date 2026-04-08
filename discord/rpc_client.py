@@ -59,7 +59,7 @@ class RPCClient:
             self._presence.connect()
             self._connected = True
             self._reconnect_attempt = 0
-            _log.info("Connected to Discord RPC (client_id=%s).", CLIENT_ID)
+            _log.info("Connected to Discord RPC.")
             return True
         except InvalidID as exc:
             _log.error(
