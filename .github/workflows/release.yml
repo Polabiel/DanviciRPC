@@ -123,10 +123,25 @@ jobs:
 
             Set the following environment variables before running:
 
+            **Linux / macOS (bash/zsh):**
             ```bash
             export DISCORD_CLIENT_ID="your_discord_application_id"
-            export LARGE_IMAGE_KEY="resolve"   # asset key in Discord Developer Portal
+            export LARGE_IMAGE_KEY="resolve"
             ```
+
+            **Windows — PowerShell:**
+            ```powershell
+            $env:DISCORD_CLIENT_ID = "your_discord_application_id"
+            $env:LARGE_IMAGE_KEY = "resolve"
+            ```
+
+            **Windows — Command Prompt (cmd.exe):**
+            ```bat
+            set DISCORD_CLIENT_ID=your_discord_application_id
+            set LARGE_IMAGE_KEY=resolve
+            ```
+
+            > **Tip:** You can also create a `.env` file in the same directory as the executable with the variables above — the application loads it automatically on startup.
 
             Then run the executable directly — no Python installation required.
           files: artifacts/*
