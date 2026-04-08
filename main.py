@@ -6,6 +6,8 @@ Brings together:
 - Discord Rich Presence updates
 - Session timing
 - Application state management
+- System tray icon (cross-platform)
+- Auto-start on login (optional)
 """
 
 import signal
@@ -15,7 +17,8 @@ import os
 import psutil
 import logging
 
-from config import UPDATE_INTERVAL, FALLBACK_PROJECT, validate as validate_config
+import autostart as _autostart
+from config import UPDATE_INTERVAL, FALLBACK_PROJECT, AUTOSTART_ENABLED, validate as validate_config
 from core.session import SessionTracker
 from core.state_manager import AppState, StateManager
 from discord.rpc_client import RPCClient
@@ -167,8 +170,13 @@ def _push_rpc(
 # ── Main loop ──────────────────────────────────────────────────────────────────
 
 
-def run() -> None:
-    """Entry point for the main update loop."""
+def run(tray_app=None) -> None:
+    """Entry point for the main update loop.
+
+    Args:
+        tray_app: Optional :class:`tray.TrayApp` instance.  When provided,
+                  the tray status label is updated on each state change.
+    """
     _log.info("DaVinciRPC starting …")
     validate_config()
 
@@ -241,6 +249,8 @@ def run() -> None:
 
             if state_changed or not rpc.connected:
                 _push_rpc(rpc, state_mgr.current, session)
+                if tray_app is not None:
+                    _update_tray_status(tray_app, state_mgr.current)
 
             # ── Sleep for the remainder of the interval ───────────────────────
             elapsed = time.monotonic() - loop_start
@@ -270,5 +280,42 @@ def run() -> None:
         _log.info("Goodbye.")
 
 
+# ── Tray status helper ────────────────────────────────────────────────────────
+
+
+def _update_tray_status(tray_app, state: AppState) -> None:
+    """Push the current state to the tray status label (best-effort)."""
+    try:
+        from config import INACTIVE_DETAILS
+
+        if not state.resolve_active:
+            tray_app.update_status(INACTIVE_DETAILS, "")
+        else:
+            tray_app.update_status(state.mode, state.project_name)
+    except Exception as exc:
+        _log.debug("Failed to update tray status: %s", exc)
+
+
+# ── Entry point ───────────────────────────────────────────────────────────────
+
+
 if __name__ == "__main__":
-    run()
+    # ── Auto-start setup (first-run, idempotent) ──────────────────────────────
+    if AUTOSTART_ENABLED and not _autostart.is_enabled():
+        _autostart.enable()
+
+    # ── System tray ───────────────────────────────────────────────────────────
+    # Try to launch with a tray icon.  Falls back to headless if pystray or
+    # Pillow are not available.
+    def _request_shutdown() -> None:
+        global _shutdown_requested
+        _shutdown_requested = True
+
+    try:
+        from tray import TrayApp
+
+        tray = TrayApp(run_loop_fn=run, shutdown_callback=_request_shutdown)
+        tray.start()
+    except Exception as exc:
+        _log.warning("Tray launch failed (%s) — running headless.", exc)
+        run()
