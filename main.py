@@ -38,15 +38,17 @@ def find_conflicting_instances(project_root: str) -> list:
     - Process cmdline contains 'main.py'
     - Process name or exe contains 'resolve-rpc' (packaged binary name)
 
-    Excludes the current process.
+    Excludes the current process and its parent (the PyInstaller bootstrap
+    process when running as a packaged executable).
     """
     current_pid = os.getpid()
+    parent_pid = os.getppid()
     matches = []
     for proc in psutil.process_iter(["pid", "name", "cmdline", "exe"]):
         try:
             info = proc.info
             pid = info.get("pid")
-            if pid == current_pid:
+            if pid == current_pid or pid == parent_pid:
                 continue
             name = (info.get("name") or "").lower()
             exe = (info.get("exe") or "")
