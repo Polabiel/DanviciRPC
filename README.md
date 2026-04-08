@@ -65,7 +65,7 @@ CLIENT_ID: str = os.environ.get("DISCORD_CLIENT_ID", "SeuClientIdAqui")
 |-----------------------|---------|-------------------------------------------------------|
 | `DISCORD_CLIENT_ID`   | —       | **Obrigatório** — ID da aplicação Discord             |
 | `UPDATE_INTERVAL`     | `15`    | Intervalo de atualização do RPC em segundos           |
-| `ENABLE_RESOLVE_API`  | `true`  | Ativa a integração com a API de scripting do Resolve  |
+| `ENABLE_RESOLVE_API`  | `false` | Ativa a integração com a API de scripting do Resolve  |
 
 ---
 
