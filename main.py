@@ -311,10 +311,18 @@ if __name__ == "__main__":
         global _shutdown_requested
         _shutdown_requested = True
 
+    def _reset_shutdown() -> None:
+        global _shutdown_requested
+        _shutdown_requested = False
+
     try:
         from tray import TrayApp
 
-        tray = TrayApp(run_loop_fn=run, shutdown_callback=_request_shutdown)
+        tray = TrayApp(
+            run_loop_fn=run,
+            shutdown_callback=_request_shutdown,
+            reset_shutdown_callback=_reset_shutdown,
+        )
         tray.start()
     except Exception as exc:
         _log.warning("Tray launch failed (%s) — running headless.", exc)

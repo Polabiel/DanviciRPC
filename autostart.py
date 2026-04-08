@@ -6,8 +6,8 @@ launches automatically when the user logs in.
 Platform support
 ----------------
 - **Windows**: ``HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run``
-- **Linux**: ``~/.config/autostart/danvicirpc.desktop``  (XDG standard)
-- **macOS**: ``~/Library/LaunchAgents/com.danvicirpc.app.plist``
+- **Linux**: ``~/.config/autostart/davincirpc.desktop``  (XDG standard)
+- **macOS**: ``~/Library/LaunchAgents/com.davincirpc.app.plist``
 """
 
 from __future__ import annotations

@@ -75,15 +75,21 @@ class TrayApp:
         Optional callable invoked when the user requests shutdown or restart
         via the tray menu.  Use this to set any stop flags in the calling
         module instead of having the tray import module internals.
+    reset_shutdown_callback:
+        Optional callable invoked after the worker thread has stopped during
+        a *restart* operation.  Use this to clear any stop flags so the
+        freshly started worker thread does not exit immediately.
     """
 
     def __init__(
         self,
         run_loop_fn: Callable,
         shutdown_callback: Optional[Callable[[], None]] = None,
+        reset_shutdown_callback: Optional[Callable[[], None]] = None,
     ) -> None:
         self._run_loop_fn = run_loop_fn
         self._shutdown_callback = shutdown_callback
+        self._reset_shutdown_callback = reset_shutdown_callback
         self._stop_event = threading.Event()
         self._worker: Optional[threading.Thread] = None
         self._icon = None
@@ -200,12 +206,22 @@ class TrayApp:
             except Exception as exc:
                 _log.debug("Shutdown callback raised: %s", exc)
 
+    def _reset_shutdown(self) -> None:
+        """Invoke the reset-shutdown callback if one was provided."""
+        if self._reset_shutdown_callback is not None:
+            try:
+                self._reset_shutdown_callback()
+            except Exception as exc:
+                _log.debug("Reset-shutdown callback raised: %s", exc)
+
     def _on_restart(self, icon, item) -> None:  # noqa: ARG002
         """Menu handler: Reiniciar RPC."""
         _log.info("Restart requested via tray menu.")
         self._request_shutdown()
         if self._worker and self._worker.is_alive():
             self._worker.join(timeout=5)
+        # Reset the stop flag so the new worker does not exit immediately.
+        self._reset_shutdown()
         self._status_text = "Reiniciando…"
         self._refresh_menu()
         self._start_worker()
