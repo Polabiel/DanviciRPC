@@ -149,6 +149,8 @@ class TrayApp:
                 enabled=False,
             ),
             pystray.Menu.SEPARATOR,
+            pystray.MenuItem("Mostrar logs", self._on_show_logs),
+            pystray.Menu.SEPARATOR,
             pystray.MenuItem("Reiniciar RPC", self._on_restart),
             pystray.Menu.SEPARATOR,
             pystray.MenuItem("Sair", self._on_quit),
@@ -225,6 +227,27 @@ class TrayApp:
         self._status_text = "Reiniciando…"
         self._refresh_menu()
         self._start_worker()
+
+    def _on_show_logs(self, icon, item) -> None:  # noqa: ARG002
+        """Menu handler: abrir o visualizador de logs em processo separado."""
+        _log.info("Show logs requested via tray menu.")
+        try:
+            import subprocess
+            import sys
+            import os
+
+            # If the application is running from a bundled executable (PyInstaller,
+            # cx_Freeze, etc.) the recommended approach is to re-run the executable
+            # with a special flag so the single-file bundle can start the viewer.
+            if getattr(sys, "frozen", False):
+                subprocess.Popen([sys.executable, "--show-logs"], cwd=os.path.dirname(sys.executable))
+            else:
+                script = os.path.join(os.path.dirname(__file__), "log_viewer.py")
+                # Launch the viewer as a separate process to avoid event-loop
+                # conflicts between pystray and Tkinter.
+                subprocess.Popen([sys.executable, script], cwd=os.path.dirname(__file__))
+        except Exception as exc:
+            _log.exception("Failed to spawn log viewer: %s", exc)
 
     def _on_quit(self, icon, item) -> None:  # noqa: ARG002
         """Menu handler: Sair."""

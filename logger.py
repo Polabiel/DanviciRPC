@@ -25,6 +25,16 @@ def _get_log_dir() -> str:
     return os.path.join(xdg, "davincirpc", "logs")
 
 
+def get_log_path() -> str:
+    """Return the path to the main log file used by DaVinciRPC.
+
+    This helper is intended for tools that need to read or display the
+    log file (e.g. an external log viewer).
+    """
+    log_dir = _get_log_dir()
+    return os.path.join(log_dir, "davincirpc.log")
+
+
 def get_logger(name: str, level: Optional[int] = None) -> logging.Logger:
     """Return a named logger.  On first call the root handler is installed.
 

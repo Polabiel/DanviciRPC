@@ -198,9 +198,8 @@ def run(tray_app=None) -> None:
     state_mgr = StateManager()
     _log.info("StateManager instantiated.")
 
-    # Register OS signal handlers for graceful shutdown
-    signal.signal(signal.SIGINT, _handle_signal)
-    signal.signal(signal.SIGTERM, _handle_signal)
+    # Signal handlers are registered in the main thread (see __main__)
+    # to avoid ValueError: "signal only works in main thread of the main interpreter"
 
 
     # Optionally enable verbose pypresence logging for debugging
@@ -300,6 +299,20 @@ def _update_tray_status(tray_app, state: AppState) -> None:
 
 
 if __name__ == "__main__":
+    # If invoked with --show-logs, run the log viewer and exit immediately.
+    # This supports both development (separate script) and packaged
+    # executables (PyInstaller -- onefile) where the bundled executable
+    # should re-run itself with this flag to show logs.
+    if "--show-logs" in sys.argv:
+        try:
+            from log_viewer import main as _show_logs  # local import
+
+            _show_logs()
+            sys.exit(0)
+        except Exception as exc:  # pragma: no cover - defensive
+            _log.exception("Failed to launch log viewer: %s", exc)
+            sys.exit(1)
+
     # ── Auto-start setup (first-run, idempotent) ──────────────────────────────
     if AUTOSTART_ENABLED and not _autostart.is_enabled():
         _autostart.enable()
@@ -314,6 +327,13 @@ if __name__ == "__main__":
     def _reset_shutdown() -> None:
         global _shutdown_requested
         _shutdown_requested = False
+
+    # Register OS signal handlers in the main thread for graceful shutdown.
+    try:
+        signal.signal(signal.SIGINT, _handle_signal)
+        signal.signal(signal.SIGTERM, _handle_signal)
+    except Exception as exc:
+        _log.debug("Signal handlers not installed in main thread: %s", exc)
 
     try:
         from tray import TrayApp
