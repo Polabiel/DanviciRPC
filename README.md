@@ -49,9 +49,25 @@ DanviciRPC/
 
 A forma recomendada é via variável de ambiente (sem colocar segredos no código):
 
+**Linux / macOS (bash/zsh):**
 ```bash
 export DISCORD_CLIENT_ID="SeuClientIdAqui"
+export LARGE_IMAGE_KEY="resolve"
 ```
+
+**Windows — PowerShell:**
+```powershell
+$env:DISCORD_CLIENT_ID = "SeuClientIdAqui"
+$env:LARGE_IMAGE_KEY = "resolve"
+```
+
+**Windows — Command Prompt (cmd.exe):**
+```bat
+set DISCORD_CLIENT_ID=SeuClientIdAqui
+set LARGE_IMAGE_KEY=resolve
+```
+
+> **Dica:** Você também pode criar um arquivo `.env` na raiz do projeto com essas variáveis — a aplicação carrega automaticamente ao iniciar.
 
 Ou edite `config.py` e substitua o valor padrão:
 
