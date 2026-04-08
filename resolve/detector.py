@@ -34,14 +34,17 @@ def is_resolve_running() -> bool:
     """
     target = _get_process_name().lower()
     try:
-        for proc in psutil.process_iter(["name"]):
+        for proc in psutil.process_iter(["name", "pid"]):
             name = (proc.info.get("name") or "").lower()
+            pid = proc.info.get("pid")
             if name == target:
+                _log.info("Resolve process detected: %s (pid=%s)", proc.info.get("name"), pid)
                 return True
     except psutil.AccessDenied as exc:
         _log.warning("Access denied while iterating processes: %s", exc)
     except psutil.NoSuchProcess:
         pass  # process vanished between iteration and attribute access
+    _log.info("No Resolve process detected")
     return False
 
 
@@ -67,19 +70,73 @@ def detect_mode_from_window() -> str:
 
     try:
         windows = gw.getAllTitles()
+        _log.info("Enumerated %d window titles for mode detection.", len(windows) if windows is not None else 0)
     except (AttributeError, RuntimeError, OSError) as exc:
         _log.warning("Failed to enumerate windows: %s", exc)
         return FALLBACK_MODE
 
-    resolve_titles = [t for t in windows if "davinci resolve" in t.lower() or "resolve" in t.lower()]
+    resolve_titles = [t for t in windows if t and ("davinci resolve" in t.lower() or "resolve" in t.lower())]
+    _log.info("Resolve window titles found: %s", resolve_titles)
 
     if not resolve_titles:
+        _log.info("No Resolve window titles matched — using fallback mode %r", FALLBACK_MODE)
         return FALLBACK_MODE
 
     title_lower = resolve_titles[0].lower()
     for keyword, mode in WINDOW_MODE_MAP.items():
         if keyword in title_lower:
-            _log.debug("Detected mode %r from window title %r", mode, resolve_titles[0])
+            _log.info("Detected mode %r from window title %r", mode, resolve_titles[0])
             return mode
 
+    _log.info("No keyword matched in Resolve title — using fallback mode %r", FALLBACK_MODE)
     return FALLBACK_MODE
+
+
+def detect_project_from_window() -> Optional[str]:
+    """Try to extract the project name from the Resolve window title.
+
+    Handles common title formats such as:
+      - "DaVinci Resolve - <Project Name>"
+      - "<Project Name> - DaVinci Resolve"
+
+    Returns the project name string or ``None`` when it cannot be determined.
+    """
+    try:
+        import pygetwindow as gw  # type: ignore[import-untyped]
+    except (ImportError, NotImplementedError):
+        _log.debug("pygetwindow not available — cannot detect project from window title")
+        return None
+
+    try:
+        windows = gw.getAllTitles()
+    except (AttributeError, RuntimeError, OSError) as exc:
+        _log.debug("Failed to enumerate windows for project detection: %s", exc)
+        return None
+
+    resolve_titles = [t for t in windows if t and ("davinci resolve" in t.lower() or "resolve" in t.lower())]
+    if not resolve_titles:
+        return None
+
+    for title in resolve_titles:
+        t = title.strip()
+        lower = t.lower()
+
+        # Pattern: "DaVinci Resolve - Project Name"
+        marker = "davinci resolve - "
+        if marker in lower:
+            idx = lower.find(marker)
+            project = t[idx + len(marker) :].strip()
+            if project:
+                _log.info("Detected project name from window (pattern 'DaVinci Resolve -'): %r", project)
+                return project
+
+        # Pattern: "Project Name - DaVinci Resolve"
+        marker2 = " - davinci resolve"
+        if marker2 in lower:
+            idx = lower.find(marker2)
+            project = t[:idx].strip()
+            if project:
+                _log.info("Detected project name from window (pattern '- DaVinci Resolve'): %r", project)
+                return project
+
+    return None

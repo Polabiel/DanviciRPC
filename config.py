@@ -3,6 +3,18 @@
 import logging
 import os
 
+# Auto-load environment variables from a .env file if python-dotenv is available.
+# This allows running the project locally using a .env file without exporting vars.
+try:
+    from dotenv import load_dotenv, find_dotenv  # type: ignore
+
+    _dotenv_path = find_dotenv()
+    if _dotenv_path:
+        load_dotenv(_dotenv_path)
+except Exception:
+    # python-dotenv not installed or failed to load — continue without it.
+    pass
+
 # ── Discord ──────────────────────────────────────────────────────────────────
 # Override by setting the DISCORD_CLIENT_ID environment variable.
 # The placeholder below is intentionally invalid so Discord will reject the
@@ -13,7 +25,9 @@ CLIENT_ID: str = os.environ.get("DISCORD_CLIENT_ID", "REPLACE_WITH_YOUR_CLIENT_I
 UPDATE_INTERVAL: int = int(os.environ.get("UPDATE_INTERVAL", "15"))  # seconds
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
-ENABLE_RESOLVE_API: bool = os.environ.get("ENABLE_RESOLVE_API", "true").lower() == "true"
+# Disable Resolve API by default to avoid importing native DaVinciResolveScript
+# on systems where Resolve is not installed or its Python modules may crash.
+ENABLE_RESOLVE_API: bool = os.environ.get("ENABLE_RESOLVE_API", "false").lower() == "true"
 
 # ── Reconnection ──────────────────────────────────────────────────────────────
 MAX_RECONNECT_ATTEMPTS: int = 5
