@@ -28,6 +28,10 @@ O **DaVinciRPC** monitora sua atividade no DaVinci Resolve e a exibe em tempo re
 * **Tempo de Sessão Persistente:** O cronômetro não zera se o script oscilar.
 * **Resiliência:** Reconexão automática com backoff exponencial e tratamento de exceções robusto.
 
+<p align="center">
+  <img width="290" height="122" alt="image" src="https://github.com/user-attachments/assets/71467c96-d8fa-4068-98a4-6370b308fa6e" />
+</p>
+
 ---
 
 ## 📂 Estrutura do Projeto
